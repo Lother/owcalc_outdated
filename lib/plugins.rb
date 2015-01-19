@@ -1,0 +1,6 @@
+require_relative "./ruby-cache-0.3.0/lib/cache.rb"
+require_relative "./plugins/erpk.rb"
+require_relative "./plugins/fightcalc.rb"
+require_relative "./plugins/erpk_toolbox.rb"
+require_relative "./plugins/shuffler.rb"
+require_relative "./plugins/admin_toolbox.rb"
