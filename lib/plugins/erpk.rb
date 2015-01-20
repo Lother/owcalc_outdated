@@ -11,6 +11,18 @@ class << Erpk
   attr_accessor :nick_binding
   #ERPK_URL="http://api.erpk.org"
   ERPK_SEARCH_URL = "http://www.erepublik.com/en/main/search/?q=" 
+  LegendStar = { 
+    "I" => 1,
+    "II" => 2,
+    "III" => 3,
+    "IV" => 4,
+    "V" => 5,
+    "VI" => 6,
+    "VII" => 7,
+    "VIII" => 8,
+    "IX" => 9,
+    "X" => 10,
+  }
   Rank = {
     "Recruit" => 2,
     "Private" => 2,
@@ -28,7 +40,11 @@ class << Erpk
     "National Force" => 50,
     "World Class Force" => 54,
     "Legendary Force" => 58,
-    "God of War" => 62 }
+    "God of War" => 62,
+    "Titan" => 66,
+    "Legends of" =>70
+
+ }
     
   def initialize(profile_cache = nil, id_cache = {}, nick_binding = {})
     @profile_cache = profile_cache || Cache.new(expiration: 120)
@@ -123,40 +139,46 @@ class << Erpk
     data = Nokogiri::HTML open(url).read
 
     profile = Profile.new
-    profile[:rank_star] = data.css(".citizen_military > h4 > a").children.to_s.scan('*').size
-    profile[:rank_text] = data.css(".citizen_military > h4 > a").children.to_s.gsub(/\**/,"").gsub(/\ $/,"")
-    profile[:strength] = data.css(".citizen_military > h4")[0].content.gsub(/[\r|\t]/,"").gsub(/\,/,'').to_f
-    profile[:rank_level] = Rank[profile[:rank_text]].to_i + profile[:rank_star]
+    profile[:rank_text] = data.css(".rank_name_holder > a").children.to_s.gsub(/\**/,"").gsub(/\ $/,"")
+    profile[:strength] = data.css(".military_box_info")[1].text.gsub(/[\r|\t]/,"").gsub(/\,/,'').to_f
+    if !profile[:rank_text].include?('Legends of')
+        profile[:rank_star] = data.css(".rank_name_holder > a").children.to_s.scan('*').size
+        profile[:rank_level] = Rank[profile[:rank_text]].to_i + profile[:rank_star]
+    else
+        tmp = profile[:rank_text].match(/([IVX]*)$/)[1]
+        profile[:rank_star] = LegendStar[tmp].to_i
+        profile[:rank_level] = Rank['Legends of'].to_i + profile[:rank_star] - 1
+    end
+
     profile[:citizenship] = data.css('.citizen_info > a > img').last.attr('alt').to_s
     profile[:location] = data.css('.citizen_info > a').children[3].text.gsub(/ */,'')
 
-    rank_points_full = data.css('div.stat>small>strong')[1].children.text.gsub(/[,| ]/,'').match(/(\d+)\/(\d+)/)
+    rank_points_full = data.css('div.stat>small>strong').children.text.gsub(/[,| ]/,'').match(/(\d+)\/(\d+)/)
     profile[:next_rank_points] = rank_points_full[2].to_i - rank_points_full[1].to_i
     profile[:rank_points] = rank_points_full[1].to_i
 
-    user_name = data.css('.citizen_profile_header>h2:has(span)').css('a').remove()
-    user_name = data.css('.citizen_profile_header>h2:has(span)').text.gsub(/\n */,'').gsub(/ *\t *\t *$/,'').gsub(/\t*/,'').gsub(/ *$/,'')
-    profile[:user_name] = (user_name.class == Array)? (user_name[0]):(user_name)
+    profile[:user_name] = data.css('img.citizen_avatar').attr('alt').text
+    profile[:division] = data.css('div.citizen_military_box>span.military_box_info')[3].text.match(/(D\d)/)[1]
 
     profile[:birth] = Time.parse(data.css('.citizen_second>p').children.text)
-    profile[:level] = data.css('div.citizen_experience>strong').children.to_s.to_i
-    profile[:experience_points] = data.css('div.citizen_experience>div>p').text.gsub(/[,| ]/,'').match(/(\d+)/)[1].to_i
+    profile[:level] = data.css('strong.citizen_level').text.to_i
+    profile[:experience_points] = data.css('strong.citizen_level').attr('title').text.gsub(/[,| ]/,'').match(/(\d+)/)[0].to_i
     profile[:first_friend] = if !data.css('div.citizen_activity>ul>li>a').first.nil?
                                data.css('div.citizen_activity>ul>li>a').first["title"]
                              else 
                                nil
                              end
-    profile[:presence] = data.css('.citizen_presence>img').attr('alt').text
+    profile[:presence] = data.css('.online_status>img').attr('alt').text
     profile[:user_id] = id
 
     medals = {}
     data.css('.achiev>li>.counter').each{|m| medals.store m.parent.css('strong').text.gsub(/\d*/,'').to_sym, m.text.to_i}
     profile[:medals] = medals
 
-    avatar = data.css('div.citizen_profile_header>img').last.values.last.match(/Citizens(.+)_142x142\.jpg\)\;/)
+    avatar = data.css('img.citizen_avatar').attr('style').text.match(/\((http\:\/\/cdnt\.erepublik\.net\/.+?\/142x142\/.*?\.jpg)\);/)
     profile[:avatar] = 
       if avatar
-        avatar[1] + ".jpg"
+        avatar[1]
       else
         "Avatar not found"
       end
@@ -166,6 +188,6 @@ class << Erpk
 
 end
 
-profile_args = [:user_name, :rank_star, :rank_text, :strength, :rank_level, :birth, :rank_points, :level, :experience_points, :first_friend, :presence, :user_id, :avatar, :citizenship, :location, :next_rank_points, :medals]
+profile_args = [:user_name, :rank_star, :rank_text, :strength, :rank_level, :birth, :rank_points, :level, :experience_points, :division, :first_friend, :presence, :user_id, :avatar, :citizenship, :location, :next_rank_points, :medals]
 class Profile < Struct.new(*profile_args)
 end

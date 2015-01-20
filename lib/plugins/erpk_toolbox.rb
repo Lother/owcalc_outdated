@@ -25,12 +25,12 @@ class ErpkToolbox
     return profile
   end
 
-  Lookup_message_args = [:user_name, :user_id, :level, :experience_points, :citizenship, :location, :strength, :rank_level, :first_friend]
+  Lookup_message_args = [:user_name, :user_id, :level, :experience_points, :citizenship, :location, :strength, :rank_level, :division, :first_friend]
 
-	def lookup_message(profile)
+  def lookup_message(profile)
     values=[]
     Lookup_message_args.each {|arg| values << profile[arg]}
-	  return sprintf("%s[%d] Lv%d(%dXP) 國籍 %s 位於 %s 力量%d 軍階Lv%d 第一個朋友%s 天數%s",
+	  return sprintf("%s[%d] Lv%d(%dXP) 國籍 %s 位於 %s 力量%d 軍階Lv%d %s 第一個朋友%s 天數%s",
                    *values,
                    ((Time.new - profile[:birth])/86400).floor
                   )
@@ -65,6 +65,13 @@ class ErpkToolbox
       msg.reply lookup_message(profile) 
     end
   end
+
+  match(/(?:h)(.+)/i, method: :command_help)
+  def command_help(msg, args)
+    handle_exception(msg) do
+      msg.reply "command : @lp, @fc, @ln, @ow, @ava, @medal, @do, @link"
+    end
+  end
   
   match(/(?:donate|do)(.*)/i, method: :donate)
   def donate(msg, args)
@@ -86,7 +93,7 @@ class ErpkToolbox
   def avatar(msg, args)
     handle_exception(msg) do
       profile = parse(msg.user.nick, args)
-      msg.reply "#{profile[:user_name]}的個人頭像 http://static.erepublik.com/uploads/avatars/Citizens"+profile[:avatar].to_s
+      msg.reply "#{profile[:user_name]}的個人頭像 "+profile[:avatar].to_s
     end
   end
 
