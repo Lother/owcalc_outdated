@@ -86,11 +86,13 @@ class << Erpk
     return @profile_cache[id]
   end
 
-  def fight_calc(rank, strength, natural_enemy = false)
+  def fight_calc(rank, strength, lv100up, booster, natural_enemy = false)
     inf = []
     ne_bonus = natural_enemy ? 1.1 : 1.0
+    lv_bonus = lv100up  ? 1.1 : 1.0
+    booster_bonus = booster!=nil ? booster : 1.0
     [1,1.2,1.4,1.6,1.8,2,2.2,3].each do |q|
-      inf << ((((rank.to_f-1)/20 + 0.3) * ((strength.to_f / 10) + 40)) * q * ne_bonus).floor
+      inf << ((((rank.to_f-1)/20 + 0.3) * ((strength.to_f / 10) + 40)) * q * ne_bonus * lv_bonus * booster_bonus).floor
     end
     return inf
   end
@@ -152,8 +154,12 @@ class << Erpk
 
     profile[:citizenship] = data.css('.citizen_info > a > img').last.attr('alt').to_s
     profile[:location] = data.css('.citizen_info > a').children[3].text.gsub(/ */,'')
-
-    rank_points_full = data.css('div.stat>small>strong').children.text.gsub(/[,| ]/,'').match(/(\d+)\/(\d+)/)
+    profile[:user_state] = if !data.css('div.citizen_state>div.is>span').first.nil?
+                              '死亡人口'
+                           else
+                              ''#data.css('span.online_status').text.gsub(/[\r\t\n ]/,'')
+                           end
+    rank_points_full = data.css('span.rank_numbers').text.gsub(/[,| ]/,'').match(/(\d+)\/(\d+)/)
     profile[:next_rank_points] = rank_points_full[2].to_i - rank_points_full[1].to_i
     profile[:rank_points] = rank_points_full[1].to_i
 
@@ -188,6 +194,6 @@ class << Erpk
 
 end
 
-profile_args = [:user_name, :rank_star, :rank_text, :strength, :rank_level, :birth, :rank_points, :level, :experience_points, :division, :first_friend, :presence, :user_id, :avatar, :citizenship, :location, :next_rank_points, :medals]
+profile_args = [:user_name, :rank_star, :rank_text, :strength, :rank_level, :birth, :rank_points, :level, :experience_points, :division, :first_friend, :presence, :user_id, :avatar, :citizenship, :location, :next_rank_points, :medals,:user_state]
 class Profile < Struct.new(*profile_args)
 end

@@ -24,10 +24,24 @@ class FightCalc
       opts.on('-e', '10% bonus'                          ) do |e|
         options[:natural_enemy] = true 
       end
+      opts.on('-b', 'booster 50%'                          ) do |b50|
+        if options[:booster] == nil
+          options[:booster] = 1.5
+        else
+          raise '-b & -B only exist one!'
+        end
+      end
+      opts.on('-B', 'booster 100%'                         ) do |b100|
+        if options[:booster] == nil
+          options[:booster] = 2.0 
+        else
+          raise '-b & -B only exist one!'
+        end
+      end
       opts.on('-N', 'Next Rank'                          ) do |n|
         options[:next_rank] = true 
       end
-      opts.on('-o obj', Integer, 'Objective influence'     ) do |obj|
+      opts.on('-o obj', Integer, 'Objective influence'   ) do |obj|
         options[:objective] = obj
       end
       opts.on('-f fights', Integer, 'specify how many time to fight') do |f|
@@ -44,6 +58,7 @@ class FightCalc
 
     fc_options = {
       :user_id       => profile[:user_id],
+      :lv100up       => profile[:level]>= 100,
       :strength      => profile[:strength],
       :rank_level    => profile[:rank_level],
       :user_name     => profile[:user_name],
@@ -99,7 +114,8 @@ class FightCalc
   end
 
   def inf_msg(options)
-    influence = Erpk.fight_calc(*options.values_at(:rank_level, :strength),
+    influence = Erpk.fight_calc(*options.values_at(:rank_level, :strength, :lv100up),
+                               (options[:booster]),
                                (options[:natural_enemy] unless options[:next_rank]))
     inf = if options[:objective] and !options[:next_rank]
             inf_objective(influence, options[:objective])
@@ -110,10 +126,13 @@ class FightCalc
           else
             inf_str(influence, options[:fights])
           end
-    return sprintf("%s(rank %d str %d%s%s)%s",
+    return sprintf("%s(rank %d str %d%s%s%s%s%s)%s",
                    *options.values_at(:user_name, :rank_level, :strength),
                    (" #{options[:fights]}次" unless options[:fights] == 1),
                    (" 加上NE" if options[:natural_enemy]),
+                   (" Lv100up" if options[:lv100up]),
+                   (" +50%" if options[:booster] == 1.5),
+                   (" +100%" if options[:booster] == 2.0),
                    inf)
                    
   end
