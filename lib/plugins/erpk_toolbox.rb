@@ -121,8 +121,8 @@ class ErpkToolbox
     handle_exception(msg) do
       profile = parse(msg.user.nick, args)
       ow_profile = Erpk.profile_of(1772310) 
-      ow_inf = Erpk.fight_calc(ow_profile.rank_level, ow_profile.strength)[0]
-      inf = Erpk.fight_calc(profile.rank_level, profile.strength)[0]
+      ow_inf = Erpk.fight_calc(ow_profile.rank_level, ow_profile.strength,ow_profile.level)[0]
+      inf = Erpk.fight_calc(profile.rank_level, profile.strength, profile.level>=100)[0]
       str = sprintf("%s(rank %d str %d)",
                     profile.user_name,
                     profile.rank_level,

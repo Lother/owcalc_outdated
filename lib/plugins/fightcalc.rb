@@ -39,9 +39,21 @@ class FightCalc
         end
       end
       opts.on('-N', 'Next Rank'                          ) do |n|
+        if options[:next_tp] or options[:objective]
+          raise '-N ,-o and -t should not be used in the same time'
+        end
         options[:next_rank] = true 
       end
+      opts.on('-t', 'Next TP'                          ) do |t|
+        if options[:next_rank] or options[:objective]
+          raise '-N ,-o and -t should not be used in the same time'
+        end
+        options[:next_tp] = true 
+      end
       opts.on('-o obj', Integer, 'Objective influence'   ) do |obj|
+        if options[:next_tp] or options[:next_rank]
+          raise '-N ,-o and -t should not be used in the same time'
+        end
         options[:objective] = obj
       end
       opts.on('-f fights', Integer, 'specify how many time to fight') do |f|
@@ -63,6 +75,7 @@ class FightCalc
       :rank_level    => profile[:rank_level],
       :user_name     => profile[:user_name],
       :next_rank_points => profile[:next_rank_points],
+      :next_tp_points   => profile[:next_tp_points],
       :fights        => 1,
       :objective     => nil,
       :next_rank     => nil,
@@ -103,6 +116,15 @@ class FightCalc
     return inf_str
   end
 
+  def inf_next_tp(influence, remain_point)
+    inf_str = '離TP獎章'
+		influence.each_with_index do |inf, index|
+			inf_str += "\x3#{COLOR_CODE[index]}[Q#{index}]"
+      inf_str += "#{(remain_point/inf.to_f.floor).ceil} "
+		end
+    return inf_str
+  end
+
   def inf_str(influence, fights)
     inf_str = ''
     raise '-f 必須大於零' unless fights > 0
@@ -117,12 +139,12 @@ class FightCalc
     influence = Erpk.fight_calc(*options.values_at(:rank_level, :strength, :lv100up),
                                (options[:booster]),
                                (options[:natural_enemy] unless options[:next_rank]))
-    inf = if options[:objective] and !options[:next_rank]
+    inf = if options[:objective] 
             inf_objective(influence, options[:objective])
-          elsif !options[:objective] and options[:next_rank]
+          elsif options[:next_rank]
             inf_next_level(influence, options[:next_rank_points])
-          elsif options[:objective] and options[:next_rank]
-            raise '-N and -o should not be used in the same time'
+          elsif options[:next_tp]
+            inf_next_tp(influence, options[:next_tp_points])
           else
             inf_str(influence, options[:fights])
           end

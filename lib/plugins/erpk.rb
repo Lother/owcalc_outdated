@@ -86,7 +86,7 @@ class << Erpk
     return @profile_cache[id]
   end
 
-  def fight_calc(rank, strength, lv100up, booster, natural_enemy = false)
+  def fight_calc(rank, strength, lv100up = false, booster =1.0, natural_enemy = false)
     inf = []
     ne_bonus = natural_enemy ? 1.1 : 1.0
     lv_bonus = lv100up  ? 1.1 : 1.0
@@ -163,6 +163,10 @@ class << Erpk
     profile[:next_rank_points] = rank_points_full[2].to_i - rank_points_full[1].to_i
     profile[:rank_points] = rank_points_full[1].to_i
 
+    tp_points_full = data.css('div.citizen_military>div.stat>small>strong')[0].text.gsub(/[,| ]/,'').match(/(\d+)\/(\d+)/)
+    profile[:next_tp_points] = tp_points_full[2].to_i - tp_points_full[1].to_i
+    profile[:tp_points] = tp_points_full[1].to_i
+
     profile[:user_name] = data.css('img.citizen_avatar').attr('alt').text
     profile[:division] = data.css('div.citizen_military_box>span.military_box_info')[3].text.match(/(D\d)/)[1]
 
@@ -194,6 +198,6 @@ class << Erpk
 
 end
 
-profile_args = [:user_name, :rank_star, :rank_text, :strength, :rank_level, :birth, :rank_points, :level, :experience_points, :division, :first_friend, :presence, :user_id, :avatar, :citizenship, :location, :next_rank_points, :medals,:user_state]
+profile_args = [:user_name, :rank_star, :rank_text, :strength, :rank_level, :birth, :rank_points, :tp_points, :level, :experience_points, :division, :first_friend, :presence, :user_id, :avatar, :citizenship, :location, :next_tp_points, :next_rank_points, :medals,:user_state]
 class Profile < Struct.new(*profile_args)
 end
