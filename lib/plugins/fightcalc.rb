@@ -6,12 +6,21 @@ class FightCalc
   set plugin_name: 'FightCalc'
   set help: '@fc [options]'
   set prefix: '@'
-
+  Symbol = {
+    "T" => 1000000000000,
+    "G" => 1000000000,
+    "M" => 1000000,
+    "k" => 1000
+  }
   def parse(nickname, args)
     options = {}
     parser = OptionParser.new do |opts|
       opts.banner = 'Usage: @fc [options]'
 
+      opts.on('-h', '@fc help'     ) do |x|
+        raise "@fc [-s strength] [-r rank] [-e] [-b|-B] [-N|-t|-o damage|-f fights] [-i userNo|username]\n"+
+              "-e:加上NE, -b:+50%, -B:+100%, -N:下一軍階, -t:下一TP章, -o:輸出傷害, -f:次數"
+      end
       opts.on('-i id', Integer, 'specify citizen id'     ) do |id|
         options[:user_id] = id 
       end
@@ -19,6 +28,9 @@ class FightCalc
         options[:strength] = str 
       end
       opts.on('-r rank', Integer, 'specify rank level'   ) do |rank|
+        if options[:next_rank]
+          raise '-r and -N should not be used in the same time'
+        end
         options[:rank_level] = rank 
       end
       opts.on('-e', '10% bonus'                          ) do |e|
@@ -39,24 +51,35 @@ class FightCalc
         end
       end
       opts.on('-N', 'Next Rank'                          ) do |n|
-        if options[:next_tp] or options[:objective]
-          raise '-N ,-o and -t should not be used in the same time'
+        if options[:rank_level]
+          raise '-r and -N should not be used in the same time'
+        end
+        if options[:next_tp] or options[:objective] or options[:fights] 
+          raise '-f, -N ,-o and -t should not be used in the same time'
         end
         options[:next_rank] = true 
       end
       opts.on('-t', 'Next TP'                          ) do |t|
-        if options[:next_rank] or options[:objective]
-          raise '-N ,-o and -t should not be used in the same time'
+        if options[:next_rank] or options[:objective] or options[:fights]
+          raise '-f, -N ,-o and -t should not be used in the same time'
         end
         options[:next_tp] = true 
       end
-      opts.on('-o obj', Integer, 'Objective influence'   ) do |obj|
-        if options[:next_tp] or options[:next_rank]
-          raise '-N ,-o and -t should not be used in the same time'
+      opts.on('-o obj', String, 'Objective influence'   ) do |obj|
+        if options[:next_tp] or options[:next_rank] or options[:fights]
+          raise '-f, -N ,-o and -t should not be used in the same time'
         end
-        options[:objective] = obj
+        data = obj.match('([0-9.]+)([kMGTPEZY]?)') 
+        dec = data[1].to_f
+        if data[2] !=""
+          dec *= Symbol[data[2]]
+        end
+        options[:objective] = Integer(dec)
       end
       opts.on('-f fights', Integer, 'specify how many time to fight') do |f|
+        if options[:next_tp] or options[:next_rank] or options[:objective]
+          raise '-f, -N ,-o and -t should not be used in the same time'
+        end
         options[:fights] = f
       end
 
@@ -67,7 +90,6 @@ class FightCalc
 
     id = options[:user_id] || Erpk.search(user_name)
     profile = Erpk.profile_of(id)
-
     fc_options = {
       :user_id       => profile[:user_id],
       :lv100up       => profile[:level]>= 100,
@@ -89,10 +111,6 @@ class FightCalc
   
   def inf_objective(influence, objective)
 
-    if objective > 999999999999 or objective < 0
-      raise 'option -o is not in range'
-    end
-
     inf_str = "輸出#{objective} 需要"
     influence.each_with_index do |inf,index|
       if objective % inf != 0
@@ -101,7 +119,7 @@ class FightCalc
         inf = objective / inf 
       end
       inf_str += "\x3#{COLOR_CODE[index]}"
-      inf_str += "[Q#{index}]#{inf.ceil} "
+      inf_str += "[Q#{index}]#{Integer(inf)} "
     end      
 
     return inf_str
@@ -144,18 +162,23 @@ class FightCalc
           elsif options[:next_rank]
             inf_next_level(influence, options[:next_rank_points])
           elsif options[:next_tp]
-            inf_next_tp(influence, options[:next_tp_points])
+            if options[:next_tp_points]
+              inf_next_tp(influence, options[:next_tp_points])
+            else
+              raise 'no any tp point'
+            end
           else
             inf_str(influence, options[:fights])
           end
-    return sprintf("%s(rank %d str %d%s%s%s%s%s)%s",
-                   *options.values_at(:user_name, :rank_level, :strength),
+    return options[:user_name]+sprintf("(rank %d str %d%s%s%s%s%s)%s",
+                   *options.values_at( :rank_level, :strength),
                    (" #{options[:fights]}次" unless options[:fights] == 1),
                    (" 加上NE" if options[:natural_enemy]),
                    (" Lv100up" if options[:lv100up]),
                    (" +50%" if options[:booster] == 1.5),
                    (" +100%" if options[:booster] == 2.0),
-                   inf)
+                   inf).gsub(/(\d)(?=(\d\d\d)+\b)/,'\1,')
+
                    
   end
 

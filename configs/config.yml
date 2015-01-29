@@ -1,13 +1,13 @@
 production:
   nick: ow_calc_v3
   server: irc.rizon.net
-  password: 
-  channels: [ '#PTT_Formosa', '#roc', '#ROCAS']
+  password: test
+  channels: [ '#PTT_Formosa', '#roc', '#ROCAS' , '#lother']
   admin_password: 
 
 development:
   nick: ow_calc_test
-  server: irc.rizon.net
+  server: irc.eu.mibbit.net
   password:
   channels: ['#lother']
   admin_password: 

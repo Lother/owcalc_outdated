@@ -65,11 +65,44 @@ class ErpkToolbox
       msg.reply lookup_message(profile) 
     end
   end
+  
+  match(/(?:time)(.+)/i, method: :get_time)
+  def get_time(msg, args)
+    handle_exception(msg) do
+      res = Geokit::Geocoders::GoogleGeocoder.geocode(args)
+      addr = res.ll.split(',')
+      timezone = Timezone::Zone.new :latlon => addr
+      area = timezone.zone
+      time = timezone.time Time.now
+      msg.reply "\x02:: 時間 ::\x0f #{area} :: #{time}"
+    end
+  end
+
+  match(/(?:call) (.*)/i, method: :call_all)
+  def call_all(msg, args)
+    handle_exception(msg) do
+      if msg.channel.opped?(msg.user) or msg.channel.half_opped?(msg.user)
+        users = msg.channel.users
+        userlist =''
+        users.each_with_index do |user,index|
+           if msg.channel.voiced?(user[0]) or 
+              msg.channel.opped?(user[0]) or 
+              msg.channel.half_opped?(user[0])
+
+               userlist += "#{user[0]} "
+           end
+        end
+        msg.reply "\x02:: Notify!! ::\x0f #{userlist}\n\x0308,14\x02::  #{args}  ::\x0f"
+      elsif
+        msg.reply "#{msg.user} not channel admin"
+      end
+    end
+  end
 
   match(/(?:help)(.*?)/i, method: :command_help)
   def command_help(msg, args)
     handle_exception(msg) do
-      msg.reply "command : @lp, @fc, @ln, @ow, @ava, @medal, @do, @link, @help, @version"
+      msg.reply "command : @lp, @fc, @ln, @ow, @ava, @medal, @do, @link, @help, @version, @call, @time"
     end
   end
   

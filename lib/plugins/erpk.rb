@@ -130,6 +130,10 @@ class << Erpk
     begin
       return fetch_profile_page(id) 
     rescue Exception => e
+      if e.message == '404 Not Found'
+        raise "user not found"
+      end
+
       puts e.message
       puts e.backtrace
       #puts e.backtrace.inspect
@@ -139,7 +143,6 @@ class << Erpk
   def fetch_profile_page(id)
     url = "http://www.erepublik.com/en/citizen/profile/"+id.to_s
     data = Nokogiri::HTML open(url).read
-
     profile = Profile.new
     profile[:rank_text] = data.css(".rank_name_holder > a").children.to_s.gsub(/\**/,"").gsub(/\ $/,"")
     profile[:strength] = data.css(".military_box_info")[1].text.gsub(/[\r|\t]/,"").gsub(/\,/,'').to_f
@@ -163,10 +166,11 @@ class << Erpk
     profile[:next_rank_points] = rank_points_full[2].to_i - rank_points_full[1].to_i
     profile[:rank_points] = rank_points_full[1].to_i
 
-    tp_points_full = data.css('div.citizen_military>div.stat>small>strong')[0].text.gsub(/[,| ]/,'').match(/(\d+)\/(\d+)/)
-    profile[:next_tp_points] = tp_points_full[2].to_i - tp_points_full[1].to_i
-    profile[:tp_points] = tp_points_full[1].to_i
-
+    if data.css('div.citizen_military>div.stat>small>strong')[0]
+      tp_points_full = data.css('div.citizen_military>div.stat>small>strong')[0].text.gsub(/[,| ]/,'').match(/(\d+)\/(\d+)/)
+      profile[:next_tp_points] = tp_points_full[2].to_i - tp_points_full[1].to_i
+      profile[:tp_points] = tp_points_full[1].to_i
+    end 
     profile[:user_name] = data.css('img.citizen_avatar').attr('alt').text
     profile[:division] = data.css('div.citizen_military_box>span.military_box_info')[3].text.match(/(D\d)/)[1]
 

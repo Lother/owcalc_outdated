@@ -2,6 +2,9 @@ $LOAD_PATH << File.dirname(__FILE__) + '/lib'
 require "cinch"
 require 'yaml'
 require 'optparse'
+require 'openssl'
+require 'geokit'
+require 'timezone'
 require_relative "./lib/plugins.rb"
 
 options = {}
@@ -20,6 +23,9 @@ options = {
 }.merge(options)
 
 $config = YAML.load_file(options[:config_file])[options[:environment]]
+Timezone::Configure.begin do |c|
+  c.google_api_key = 'api_pass'
+end
 
 bot = Cinch::Bot.new do
 
@@ -30,7 +36,7 @@ bot = Cinch::Bot.new do
   configure do |c|
     c.nick = $config['nick']
     c.server = $config['server']
-    c.plugins.plugins = [FightCalc, ErpkToolbox, Shuffler, AdminToolbox]
+    c.plugins.plugins = [FightCalc, ErpkToolbox, Shuffler, AdminToolbox, MailNotify]
   end
 
   on :connect do
