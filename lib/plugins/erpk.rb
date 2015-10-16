@@ -60,8 +60,8 @@ class << Erpk
              nick_normalize(name).to_sym
            end
 
-    if @id_cache[name]
-      return @id_cache[name]
+    if @id_cache[binding_nick]
+      return @id_cache[binding_nick]
     else
       return search_html(name.to_s)
     end
@@ -70,11 +70,9 @@ class << Erpk
   def bind_nick(nick, name)
     cached_nick = nick_normalize(nick).to_sym
     bind_nick = nick.downcase.to_sym
-    @nick_binding[bind_nick] = if @id_cache[cached_nick]
-                                 name
-                               else
-                                 profile_of(search_html(name))[:user_name]
-                               end
+    id = search_html(name)
+    @nick_binding[bind_nick] = profile_of(id)[:user_name]
+    @id_cache[bind_nick] = id
     return true
   end
 
@@ -175,6 +173,7 @@ class << Erpk
     profile[:division] = data.css('div.citizen_military_box>span.military_box_info')[3].text.match(/(D\d)/)[1]
 
     profile[:birth] = Time.parse(data.css('.citizen_second>p').children.text)
+    profile[:birth] = Time.parse(profile[:birth].to_s.gsub(/ \+\d{4}/, ' CST -0700')).localtime
     profile[:level] = data.css('strong.citizen_level').text.to_i
     profile[:experience_points] = data.css('strong.citizen_level').attr('title').text.gsub(/[,| ]/,'').match(/(\d+)/)[0].to_i
     profile[:first_friend] = if !data.css('div.citizen_activity>ul>li>a').first.nil?
@@ -188,11 +187,11 @@ class << Erpk
     medals = {}
     data.css('.achiev>li>.counter').each{|m| medals.store m.parent.css('strong').text.gsub(/\d*/,'').to_sym, m.text.to_i}
     profile[:medals] = medals
-
-    avatar = data.css('img.citizen_avatar').attr('style').text.match(/\((http\:\/\/cdnt\.erepublik\.net\/.+?\/142x142\/.*?\.jpg)\);/)
+    puts data.css('img.citizen_avatar').attr('style').text
+    avatar = data.css('img.citizen_avatar').attr('style').text.match(/\(\/\/cdnt\.erepublik\.net\/.+?\/142x142\/smart\/(.*?\.jpg).*?\);/)
     profile[:avatar] = 
       if avatar
-        avatar[1]
+        "http://erpk.static.avatars.s3.amazonaws.com/" + avatar[1]
       else
         "Avatar not found"
       end

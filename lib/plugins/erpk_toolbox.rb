@@ -66,15 +66,23 @@ class ErpkToolbox
     end
   end
   
-  match(/(?:time)(.+)/i, method: :get_time)
+  match(/(?:time)(.*)/i, method: :get_time)
   def get_time(msg, args)
     handle_exception(msg) do
-      res = Geokit::Geocoders::GoogleGeocoder.geocode(args)
-      addr = res.ll.split(',')
-      timezone = Timezone::Zone.new :latlon => addr
-      area = timezone.zone
-      time = timezone.time Time.now
-      msg.reply "\x02:: 時間 ::\x0f #{area} :: #{time}"
+      if args.strip.empty?
+        args = "Taiwan"
+      end
+      begin
+        res = Geokit::Geocoders::GoogleGeocoder.geocode(args)
+        addr = res.ll.split(',')
+        timezone = Timezone::Zone.new :latlon => addr
+        area = timezone.zone
+        time = timezone.time Time.now
+        msg.reply "\x02:: 時間 ::\x0f #{area} :: #{time}"
+      rescue Exception => e
+        msg.reply "Can not find:#{args.strip}"
+      end
+
     end
   end
 
@@ -109,7 +117,7 @@ class ErpkToolbox
   match(/(?:version)(.*?)/i, method: :version_info)
   def version_info(msg, args)
     handle_exception(msg) do
-      msg.reply "機器人掛掉請聯絡 lotherex (at) gmail (dot) com \nsource code : https://github.com/Lother/owcalc_outdated"
+      msg.reply "機器人掛掉請聯絡 lotherex (at) gmail (dot) com \n或是在回應中夾帶\"lother\"字串 機器人會幫忙通知~\nsource code : https://github.com/Lother/owcalc_outdated"
     end
   end
 
